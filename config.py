@@ -1,4 +1,4 @@
-BOT_TOKEN = "8024450285:AAESjnKhTltzkvrTXBey2ZCPfGfp-dpzqVs"  # 替换为你自己的Bot Token
+BOT_TOKEN = "7303119673:AAGAgKHWs760UdtDlVPHIhypYYkiBi_791w"  # 替换为你自己的Bot Token
 ADMINS = [8166234652]  # 管理员Telegram用户ID列表（可填多个）
 DATABASE = "k3bot.db"
 
