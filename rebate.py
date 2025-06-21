@@ -1,4 +1,4 @@
-ofrom aiogram import types
+from aiogram import types
 from db import get_conn
 
 async def handle_rebate_log(msg: types.Message, bot):
