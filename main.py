@@ -18,6 +18,9 @@ from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 bot = Bot(token=config.BOT_TOKEN, parse_mode="HTML")
 dp = Dispatcher(bot)
 
+# 注册骰子handler（只需要注册一次）
+game.register_dice_handler(dp)
+
 # ===== 私聊功能：仅允许余额、钱包日志、充值、提现、菜单（内联键盘版） =====
 @dp.message_handler(commands=["start", "我的"], chat_type=['private'])
 async def my_menu(msg: types.Message):
