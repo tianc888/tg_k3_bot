@@ -1,7 +1,7 @@
 import sqlite3
 
 def get_conn():
-    return sqlite3.connect("k3bot.db")
+    return sqlite3.connect('k3bot.db')
 
 def init_db():
     conn = get_conn()
@@ -43,6 +43,15 @@ def init_db():
         txid TEXT,
         create_time DATETIME DEFAULT CURRENT_TIMESTAMP
     )''')
+    # 返利日志
+    cursor.execute('''CREATE TABLE IF NOT EXISTS rebates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        amount REAL,
+        level INTEGER,
+        from_user TEXT,
+        create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
     # 黑名单
     cursor.execute('''CREATE TABLE IF NOT EXISTS blacklist (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,39 +82,6 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS settings (
         name TEXT PRIMARY KEY,
         value TEXT
-    )''')
-    # 开奖历史
-    cursor.execute('''CREATE TABLE IF NOT EXISTS lottery_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        period TEXT UNIQUE,
-        numbers TEXT,
-        result_time DATETIME DEFAULT CURRENT_TIMESTAMP
-    )''')
-    # 追号表
-    cursor.execute('''CREATE TABLE IF NOT EXISTS chase_orders (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        bet_content TEXT,
-        game_type TEXT,
-        period_start TEXT,
-        period_count INTEGER,
-        finished_count INTEGER DEFAULT 0,
-        stop_win REAL DEFAULT 0,
-        stop_loss REAL DEFAULT 0,
-        active INTEGER DEFAULT 1,
-        win_sum REAL DEFAULT 0,
-        loss_sum REAL DEFAULT 0,
-        create_time DATETIME DEFAULT CURRENT_TIMESTAMP
-    )''')
-    # 代理返佣记录
-    cursor.execute('''CREATE TABLE IF NOT EXISTS rebate_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        from_user_id INTEGER,
-        order_id INTEGER,
-        amount REAL,
-        level INTEGER,
-        create_time DATETIME DEFAULT CURRENT_TIMESTAMP
     )''')
     # 充值/提现申请表
     cursor.execute('''CREATE TABLE IF NOT EXISTS transfer_requests (
@@ -138,15 +114,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         setting_key TEXT,
-        setting_value TEXT,
-        UNIQUE(user_id, setting_key)
-    )''')
-    # 公告/活动表
-    cursor.execute('''CREATE TABLE IF NOT EXISTS announcements (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        content TEXT,
-        create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+        setting_value TEXT
     )''')
     conn.commit()
     conn.close()
