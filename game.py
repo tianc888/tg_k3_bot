@@ -75,12 +75,14 @@ class GameManager:
             await msg.reply("投注无效，本期已封盘")
             return
 
-        from wallet import get_user_balance, change_user_balance
+        from wallet import get_user_balance, change_user_balance, remember_username
         balance = get_user_balance(msg.from_user.id)
         if balance < amount:
             await msg.reply("余额不足，请先充值")
             return
 
+        # 记住玩家username映射，方便管理员@加余额
+        remember_username(msg.from_user.id, msg.from_user.username)
         change_user_balance(msg.from_user.id, -amount, "下注", f"{self.current_round.period_code} {bet_type}{amount}")
         username = msg.from_user.full_name
         self.current_round.add_bet(msg.from_user.id, amount, username, bet_type)
