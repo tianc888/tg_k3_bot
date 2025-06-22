@@ -1,5 +1,5 @@
 from aiogram import Bot, Dispatcher, types
-from aiogram.dispatcher.filters import Command
+from aiogram.dispatcher.filters import Command, Regexp
 import asyncio
 import config
 from db import init_db, get_conn
@@ -58,7 +58,11 @@ async def withdraw_cmd(msg: types.Message):
 async def private_only(msg: types.Message):
     await msg.reply("请到群组进行投注和开奖结果等操作。")
 
-# ===== 群组功能：投注、开奖、历史等（支持中英文命令） =====
+# ===== 群组功能：支持“大100”“小200”等中文下注 =====
+@dp.message_handler(Regexp(r"^(大|小|单|双)\d+$"), chat_type=['group', 'supergroup'])
+async def chinese_bet(msg: types.Message):
+    await game.handle_bet(msg, bot)
+
 @dp.message_handler(commands=["bet", "下注"], chat_type=['group', 'supergroup'])
 async def bet_cmd(msg: types.Message):
     await game.handle_bet(msg, bot)
