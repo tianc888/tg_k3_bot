@@ -79,6 +79,41 @@ async def inviteinfo_cmd(msg: types.Message):
         return
     await rebate.handle_invite_info(msg, bot)
 
+# 管理员加余额功能
+@dp.message_handler(lambda msg: (msg.reply_to_message or '@' in msg.text))
+async def admin_add_balance_handler(msg: types.Message):
+    # 判断管理员身份
+    if msg.from_user.id not in config.ADMINS:
+        return
+    text = msg.text.strip().replace("＋", "+")  # 支持全角+
+    if not text.startswith("+"):
+        return
+    try:
+        amount = int(text[1:])
+    except Exception:
+        return
+    target_id = None
+    target_name = "用户"
+    # 回复方式
+    if msg.reply_to_message:
+        target_id = msg.reply_to_message.from_user.id
+        target_name = msg.reply_to_message.from_user.full_name
+    # @方式
+    elif '@' in text:
+        for ent in msg.entities or []:
+            if ent.type == 'mention':
+                username = msg.text[ent.offset+1:ent.offset+ent.length]
+                from wallet import get_uid_by_username
+                target_id = get_uid_by_username(username)
+                target_name = f"@{username}"
+    if not target_id:
+        await msg.reply("请通过回复玩家消息或@玩家来增加余额。")
+        return
+    from wallet import change_user_balance, get_user_balance
+    change_user_balance(target_id, amount, "管理员加余额", f"管理员@{msg.from_user.full_name} 操作")
+    new_balance = get_user_balance(target_id)
+    await msg.reply(f"{target_name} 已加余额{amount}，当前余额：{new_balance}")
+
 # 取消下注中文命令
 @dp.message_handler(lambda msg: msg.text.strip() in ["取消", "取消下注"])
 async def cancel_cmd_zh(msg: types.Message):
@@ -90,6 +125,10 @@ async def cancel_cmd_zh(msg: types.Message):
 @dp.message_handler(lambda msg: msg.chat.type in ['group', 'supergroup'])
 async def bet_all_handler(msg: types.Message):
     await game.handle_bet(msg, bot)
+    # 记住username映射
+    if msg.from_user.username:
+        from wallet import remember_username
+        remember_username(msg.from_user.id, msg.from_user.username)
 
 @dp.message_handler(commands=["report", "报表"])
 async def report_cmd(msg: types.Message):
