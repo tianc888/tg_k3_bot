@@ -1,6 +1,6 @@
 import asyncio
 import datetime
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, executor
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import config
 from db import init_db
@@ -82,10 +82,9 @@ async def inviteinfo_cmd(msg: types.Message):
 # 管理员加余额功能
 @dp.message_handler(lambda msg: (msg.reply_to_message or '@' in msg.text))
 async def admin_add_balance_handler(msg: types.Message):
-    # 判断管理员身份
     if msg.from_user.id not in config.ADMINS:
         return
-    text = msg.text.strip().replace("＋", "+")  # 支持全角+
+    text = msg.text.strip().replace("＋", "+")
     if not text.startswith("+"):
         return
     try:
@@ -94,11 +93,9 @@ async def admin_add_balance_handler(msg: types.Message):
         return
     target_id = None
     target_name = "用户"
-    # 回复方式
     if msg.reply_to_message:
         target_id = msg.reply_to_message.from_user.id
         target_name = msg.reply_to_message.from_user.full_name
-    # @方式
     elif '@' in text:
         for ent in msg.entities or []:
             if ent.type == 'mention':
@@ -114,18 +111,15 @@ async def admin_add_balance_handler(msg: types.Message):
     new_balance = get_user_balance(target_id)
     await msg.reply(f"{target_name} 已加余额{amount}，当前余额：{new_balance}")
 
-# 取消下注中文命令
 @dp.message_handler(lambda msg: msg.text.strip() in ["取消", "取消下注"])
 async def cancel_cmd_zh(msg: types.Message):
     if msg.chat.type not in ['group', 'supergroup']:
         return
     await game.handle_cancel(msg, bot)
 
-# 下注入口（所有玩法）
 @dp.message_handler(lambda msg: msg.chat.type in ['group', 'supergroup'])
 async def bet_all_handler(msg: types.Message):
     await game.handle_bet(msg, bot)
-    # 记住username映射
     if msg.from_user.username:
         from wallet import remember_username
         remember_username(msg.from_user.id, msg.from_user.username)
@@ -234,10 +228,11 @@ async def lottery_round():
             await game.settle_no_bet(values)
         await asyncio.sleep(1)
 
-async def main():
+def main():
     init_db()
-    asyncio.create_task(lottery_round())
-    await dp.start_polling(bot)
+    loop = asyncio.get_event_loop()
+    loop.create_task(lottery_round())
+    executor.start_polling(dp, loop=loop, skip_updates=True)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
