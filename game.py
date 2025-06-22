@@ -149,11 +149,30 @@ class GameManager:
         self.current_round.remove_bets_by_user(msg.from_user.id)
         await msg.reply(f"已取消本期所有下注并返还{total_refund}余额。")
 
+    def register_dice_handler(self, dp):
+        from aiogram import types
+        @dp.message_handler(lambda m: getattr(m, "dice", None) and m.chat.type in ['group', 'supergroup'])
+        async def dice_handler(msg: types.Message):
+            if not self.current_round or not self.current_round.is_closed:
+                return
+            if msg.chat.id != self.group_id:
+                return
+            if len(self.current_round.dice) < 3:
+                self.current_round.dice.append(msg.dice.value)
+
+    async def collect_player_dice(self, group_id, timeout=15):
+        from asyncio import sleep
+        start = datetime.datetime.now()
+        while (datetime.datetime.now() - start).seconds < timeout:
+            if len(self.current_round.dice) >= 3:
+                return self.current_round.dice[:3]
+            await sleep(1)
+        return self.current_round.dice[:3]
+
     def _is_baozi(self, vals):
         return vals[0] == vals[1] == vals[2]
 
     def _is_shunzi(self, vals):
-        # 顺子：任意3个连续点数，无需正顺或倒顺
         s = sorted(vals)
         return s[0]+1 == s[1] and s[1]+1 == s[2]
 
@@ -170,7 +189,6 @@ class GameManager:
         for uid, amount, username, bet_type in self.current_round.get_bets():
             win = False
             win_amt = 0
-            # 大小单双（豹子不算中奖）
             if bet_type == '大' and big and not baozi:
                 win = True
                 win_amt = amount * 2
@@ -183,7 +201,6 @@ class GameManager:
             elif bet_type == '双' and not odd and not baozi:
                 win = True
                 win_amt = amount * 2
-            # 组合型
             elif bet_type.startswith("组合"):
                 combo = bet_type[2:]
                 c1, c2 = combo[:1], combo[1:]
@@ -191,17 +208,14 @@ class GameManager:
                    ((c2 == "单" and odd) or (c2 == "双" and not odd)) and not baozi:
                     win = True
                     win_amt = amount * 4
-            # 豹子
             elif bet_type == "豹子" and baozi:
                 win = True
                 win_amt = amount * 10
-            # 指定豹子，如 1b
             elif len(bet_type) == 2 and bet_type.endswith("b") and baozi:
                 num = bet_type[0]
                 if baozi_num == num:
                     win = True
                     win_amt = amount * 50
-            # 顺子（只要是顺子即可，无需指定顺子点数）
             elif bet_type == "顺子" and shunzi:
                 win = True
                 win_amt = amount * 8
@@ -217,18 +231,4 @@ class GameManager:
         self.current_round.clear()
         return
 
-# 全局实例
 game = GameManager()
-
-def register_dice_handler(dp):
-    from aiogram import types
-    @dp.message_handler(lambda m: getattr(m, "dice", None) and m.chat.type in ['group', 'supergroup'])
-    async def dice_handler(msg: types.Message):
-        global game
-        # 确保 current_round、is_closed、group_id 合法
-        if not hasattr(game, "current_round") or not game.current_round or not game.current_round.is_closed:
-            return
-        if msg.chat.id != game.group_id:
-            return
-        if len(game.current_round.dice) < 3:
-            game.current_round.dice.append(msg.dice.value)
