@@ -149,26 +149,6 @@ class GameManager:
         self.current_round.remove_bets_by_user(msg.from_user.id)
         await msg.reply(f"已取消本期所有下注并返还{total_refund}余额。")
 
-    def register_dice_handler(self, dp):
-        from aiogram import types
-        @dp.message_handler(lambda m: m.dice and m.chat.type in ['group', 'supergroup'])
-        async def dice_handler(msg: types.Message):
-            if not self.current_round or not self.current_round.is_closed:
-                return
-            if msg.chat.id != self.group_id:
-                return
-            if len(self.current_round.dice) < 3:
-                self.current_round.dice.append(msg.dice.value)
-
-    async def collect_player_dice(self, group_id, timeout=15):
-        from asyncio import sleep
-        start = datetime.datetime.now()
-        while (datetime.datetime.now() - start).seconds < timeout:
-            if len(self.current_round.dice) >= 3:
-                return self.current_round.dice[:3]
-            await sleep(1)
-        return self.current_round.dice[:3]
-
     def _is_baozi(self, vals):
         return vals[0] == vals[1] == vals[2]
 
@@ -237,4 +217,18 @@ class GameManager:
         self.current_round.clear()
         return
 
+# 全局实例
 game = GameManager()
+
+def register_dice_handler(dp):
+    from aiogram import types
+    @dp.message_handler(lambda m: getattr(m, "dice", None) and m.chat.type in ['group', 'supergroup'])
+    async def dice_handler(msg: types.Message):
+        global game
+        # 确保 current_round、is_closed、group_id 合法
+        if not hasattr(game, "current_round") or not game.current_round or not game.current_round.is_closed:
+            return
+        if msg.chat.id != game.group_id:
+            return
+        if len(game.current_round.dice) < 3:
+            game.current_round.dice.append(msg.dice.value)
