@@ -1,10 +1,39 @@
 import asyncio
-from aiogram import types
 import re
 import random
 import time
+from aiogram import types
 
-# 用于保存每期下注信息、玩家掷骰信息
+# ====== 全局收集骰子数据结构 ======
+dice_collections = {}  # {group_id: {user_id: dice_value}}
+
+# ====== 全局骰子消息处理器，只注册一次 ======
+def register_dice_handler(dp):
+    @dp.message_handler(content_types=types.ContentType.DICE, chat_type=['group', 'supergroup'])
+    async def dice_handler(msg: types.Message):
+        group_id = msg.chat.id
+        user_id = msg.from_user.id
+        dice_value = msg.dice.value
+        # 只有在收集中才记录
+        if group_id in dice_collections:
+            if user_id not in dice_collections[group_id]:
+                dice_collections[group_id][user_id] = dice_value
+
+# ====== 在开奖流程中调用的收集函数 ======
+async def collect_player_dice(group_id, seconds):
+    """
+    在 group_id 群组内，N 秒内收集每个玩家第一次掷的 🎲 点数。
+    """
+    dice_collections[group_id] = {}
+    await asyncio.sleep(seconds)
+    result = list(dice_collections[group_id].values())
+    del dice_collections[group_id]
+    return result
+
+# ==============================
+# 原有业务相关逻辑
+# ==============================
+
 class LotteryRound:
     def __init__(self):
         self.bets = []  # [(user_id, amount, username, bet_type)]
@@ -87,29 +116,6 @@ async def handle_bet(msg: types.Message, bot):
 
     current_round.add_bet(user_id, amount, username, bet_type)
     await msg.reply(f"{username} 成功下注{bet_type or ''} {amount}！")
-
-async def collect_player_dice(group_id, seconds):
-    """
-    收集群组内N秒内玩家掷的🎲，只统计第一次骰子点数
-    """
-    collected = []
-    from aiogram import Dispatcher
-    dp = Dispatcher.get_current()
-    user_dice = {}
-
-    async def dice_handler(msg: types.Message):
-        if msg.chat.id != group_id:
-            return
-        if msg.dice and msg.dice.emoji == '🎲':
-            user_id = msg.from_user.id
-            if user_id not in user_dice:
-                user_dice[user_id] = msg.dice.value
-
-    dp.register_message_handler(dice_handler, content_types=types.ContentType.DICE)
-    await asyncio.sleep(seconds)
-    collected = list(user_dice.values())
-    dp.unregister_message_handler(dice_handler, content_types=types.ContentType.DICE)
-    return collected
 
 async def settle_no_bet(values):
     # 无人下注，直接公布结果
