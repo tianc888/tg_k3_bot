@@ -18,4 +18,4 @@ fi
 
 # 3. 启动机器人
 echo "正在启动机器人（main.py）..."
-python main.py &
+python main.py
