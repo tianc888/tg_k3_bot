@@ -8,7 +8,7 @@ def get_or_create_user(tg_id, username=None):
     if row:
         conn.close()
         return row[0]
-    cursor.execute("INSERT INTO users (tg_id, username) VALUES (?, ?)", (tg_id, username or ""))
+    cursor.execute("INSERT INTO users (tg_id, username, balance) VALUES (?, ?, 0)", (tg_id, username or ""))
     conn.commit()
     user_id = cursor.lastrowid
     conn.close()
